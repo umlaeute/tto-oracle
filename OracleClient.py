@@ -20,14 +20,25 @@ import requests
 import json
 
 if '__main__' ==  __name__:
+    def test_json(payload):
+        print("payload: %s" % (payload))
+        j=json.dumps(payload)
+        print("JSON   : %s" % (j))
+        b=bytes(j, 'utf-8')
+        print("bytes  : %s" % (b))
+        J=json.loads(b.decode())
+        print("JSON   : %s" % (J))
+        D=J['comments']
+        print("data   : %s (%s)" % (D, type(D)))
+
     URL='http://localhost:8000'
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('-u', '--url', type=str, default=URL, help='connection URL for oracle server (default: %s)' % URL)
     parser.add_argument('text', nargs='+', help='some text you want to enter')
     args=parser.parse_args()
-    text=' '.join(args.text)
-    payload={'text': text}
+    payload={'comments': args.text}
+    #test_json(payload)
     r = requests.post(args.url, data=json.dumps(payload))
     print(r.text)
 

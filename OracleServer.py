@@ -60,7 +60,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         try:
             d=self.parseQuery(data)
-            #print("got data: %s" % (d))
+            def test_json(J):
+                print("JSON   : %s" % (J))
+                D=J['comments']
+                print("data   : %s (%s)" % (D, type(D)))
+            #test_json(d)
             self._process(d, self.respond_JSON)
         except TypeError as e:
             print("oops: %s" % (e))
@@ -75,9 +79,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
         return o
 
     def _process(self, d, respondfun=None):
-        inputtext=str(d.get('text', ''))
+        # rooms: questions, comments, protests, answers
+        inputtexts=[]
+        for room in ['comments', 'protests', 'answers']:
+            t=d.get(room, '')
+            if type(t) == list:
+                t=' '.join(t)
+            print("text[%s]=%s (%s)" % (room, t, type(t)))
+            inputtexts+=[t]
+        inputtext=' '.join(inputtexts)
+        print("input: %s" % (inputtext))
         d=ot.OracleText.postag_words(inputtext, dictionary={})
-        #print("input: %s" % (inputtext))
         #print("intag: %s" % (d))
         interesting=ot.INTERESTING_TAGS
 
