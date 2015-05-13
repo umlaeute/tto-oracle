@@ -71,25 +71,37 @@ class Handler(http.server.BaseHTTPRequestHandler):
             o=os[0]
         else:
             o=sorted(os, key=lambda x:x.similindex(words), reverse=True)[0]
-        print("%s oracles chose %s" % (len(os), o))
+        print("%s oracles chose %s" % (len(os), o.name))
         return o
 
     def _process(self, d, respondfun=None):
         inputtext=str(d.get('text', ''))
-        nouns=_dictget_typed(d, 'nouns', [])
-        adjectives=_dictget_typed(d, 'adjectives', [])
-        d=ot.OracleText.postag_words(inputtext)
-        words=[]
-        words+=nouns
-        words+=adjectives
-        words+=d.get('NN', [])
-        words+=d.get('JJ', [])
+        d=ot.OracleText.postag_words(inputtext, dictionary={})
         #print("input: %s" % (inputtext))
-        #print("nouns: %s" % (nouns))
-        #print("adjectives: %s" % (adjectives))
+        #print("intag: %s" % (d))
+        interesting=ot.INTERESTING_TAGS
+
+        deltags=[]
+        for tag in d:
+            keep=False
+            for t in interesting:
+                if tag.startswith(t):
+                    keep=True
+            if not keep:
+                deltags+=[tag]
+        for tag in deltags:
+            del d[tag]
+        words=[]
+        for tag in d:
+            words+=d.get(tag, [])
+        words=list(set(words))
+        #print("input: %s" % (inputtext))
+        #print("tagged: %s" % d)
+        #print("words: %s" % (words))
+
         o=self.getoracle(words)
 
-        t=o.speak(inputtext=inputtext, nouns=nouns, adjectives=adjectives, truncate=True)
+        t=o.speak(inputtext=inputtext, truncate=True)
         if t:
             if respondfun:
                 respondfun(t)
@@ -154,5 +166,5 @@ if '__main__' ==  __name__:
     print("shutting down")
     httpd.shutdown()
 
-    #t=o.speak(inputtext="The artist is stupid!", nouns=["oracle", "situtation"], adjectives=["solid", "nice"], truncate=True)
+    #t=o.speak(inputtext="The artist is stupid!", truncate=True)
     #print(ot.array2text(t))

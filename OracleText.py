@@ -22,13 +22,36 @@ from NgramModel import NgramModel
 
 import random
 
+#nltk.help.upenn_tagset()
+TAGS=[
+    'NN', # noun (singular)
+    'NNS',# noun (plural)
+    'NNP',# proper noun (singular)
+    'NNPS',# proper noun (plural)
+
+    'JJ', # adjective
+    'JJR',# comparative
+    'JJS',# superlative
+
+    'VB', # verb
+    'VBD',# verb (past)
+    'VBN',# verb (past part.)
+    'VBP',# verb (present; not 3rd pers)
+    'VBZ',# verb (present; 3rd pers)
+    ]
+INTERESTING_TAGS=[
+    'NN', 'JJ', 'VB'
+    ]
+
 class OracleText():
     """
     text generator for TTO
     """
     def __init__(self, filename, order=2):
         text=None
-        self.filename
+        self.name=filename
+        self.interesting_tags=INTERESTING_TAGS
+        self.tags=TAGS
         with open(filename) as f:
             text=f.read()
         text, startwords=self._text2words(text)
@@ -50,15 +73,16 @@ class OracleText():
         for w in words:
             sum+=len(self.ctx.similar_words(w, n))
         res=sum/(n*len(words))
+        print("%s: similarity %s %s" % (self.name, res, words))
         return res
     def generate_basetext(self, wordcount=100):
         startword=random.choice(self.startwords)
         return self.lm.generate(wordcount, [startword])
-    def speak(self, inputtext='', nouns=[], adjectives=[], maxwords=200, truncate=False):
-        t=self._speak(inputtext, nouns, adjectives, maxwords, truncate)
+    def speak(self, inputtext='', maxwords=200, truncate=False):
+        t=self._speak(inputtext, maxwords, truncate)
         s=self._array2text(t).lower()
         return s
-    def _speak(self, inputtext, nouns, adjectives, maxwords, truncate):
+    def _speak(self, inputtext, maxwords, truncate):
         def get_tagindices(text, tags):
             d={}
             for i, (w,t) in enumerate(text):
@@ -69,11 +93,12 @@ class OracleText():
             return d
         inwords=self.postag_text(inputtext)
         replace_dict={}
-        replace_dict['NN']=nouns
-        replace_dict['JJ']=adjectives
         for (w,t) in inwords:
-            if t in replace_dict:
-                replace_dict[t]+=[w]
+            for tag in INTERESTING_TAGS:
+                if t.startswith(tag):
+                    if not tag in replace_dict:
+                        replace_dict[tag]=[]
+                    replace_dict[tag]+=[w]
         self._cleanup_dict(replace_dict)
         replace_count={}
         for k in replace_dict:
@@ -100,7 +125,10 @@ class OracleText():
                 if not words:
                     del replace_dict[t]
         return res
-
+    def tags(self, only_interesting=True):
+        if only_interesting:
+            return self.interesting_tags
+        return self.tags
     @staticmethod
     def _cleanup_dict(d):
         keys=list(d.keys())
@@ -116,6 +144,7 @@ class OracleText():
         the text won't be shortened until all tags in the dictionary
         have been seen at least mincount times
         """
+        #print("truncating for %s" % (minimumtags))
         force_truncate=True
         if minimumtags:
             force_truncate=False
@@ -155,7 +184,7 @@ class OracleText():
         for k in replwords:
             tagcount[k]=len(replwords[k])
         if truncate:
-            print("tags: %s" % (replwords))
+            #print("tags: %s" % (replwords))
             #print("pre-truncate: %s" % (template))
             template=self._truncate_text(template, minimumtags=tagcount)
             #print("pst-truncate: %s" % (template))
@@ -212,13 +241,16 @@ class OracleText():
 
     @staticmethod
     def postag_text(text):
+        #print("postag_text: %s" % (text))
         insent=nltk.sent_tokenize(text)
         inwords=[]
         for sentence in insent:
             w=nltk.word_tokenize(sentence)
             inwords+=nltk.pos_tag(w)
+        #print("postag_text:: %s" % (inwords))
         return inwords
-    def postag_words(taggedtext, dictionary={}):
+    def postag_words(taggedtext, dictionary=dict()):
+        #print("postag_words: %s .. %s" % (taggedtext, dictionary))
         if type(taggedtext) == str:
             ## that's a string; let's tag it
             taggedtext=OracleText.postag_text(taggedtext)
@@ -252,5 +284,5 @@ if '__main__' ==  __name__:
     filename=sys.argv[1]
     print("filename: %s" % (filename))
     o=OracleText(filename)
-    t=o.speak(inputtext="The artist is stupid!", nouns=["oracle", "situtation"], adjectives=["solid", "nice"], truncate=True)
+    t=o.speak(inputtext="The artist is stupid!", truncate=True)
     print(t)
