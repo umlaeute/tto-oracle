@@ -69,13 +69,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         except TypeError as e:
             print("oops: %s" % (e))
     def getoracle(self, words):
-        os=self.server.get('oracles')
-        print("oracles: %s" % (os))
+        oracles=self.server.get('oracles')
+        print("oracles: %s" % (oracles))
         if False:
-            o=os[0]
+            o=oracles[0]
         else:
-            o=sorted(os, key=lambda x:x.similindex(words), reverse=True)[0]
-        print("%s oracles chose %s" % (len(os), o.name))
+            o=sorted(oracles, key=lambda x:x.similindex(words), reverse=True)[0]
+        print("%s oracles choraclese %s" % (len(oracles), o.name))
         return o
 
     def _process(self, d, respondfun=None):
@@ -152,21 +152,21 @@ if '__main__' ==  __name__:
     parser.add_argument('-p', '--port', type=int, default=PORT, help='port that the HTTP-server listens on (default: %d)' % PORT)
     parser.add_argument('textfiles', nargs='+', help='one or more textfiles as oracle text corpus')
     args=parser.parse_args()
-    os=[]
+    oracles=[]
     for filename in args.textfiles:
         print("creating oracle using %s" % (filename))
         try:
             o=ot.OracleText(filename)
             print("created oracle %s" % (o))
-            os+=[o]
+            oracles+=[o]
         except FileNotFoundError:
             print("couldn't read %s" % filename)
-    if not os:
+    if not oracles:
         import sys
         sys.exit(1)
     hnd = Handler
     httpd = Server(("", args.port), hnd)
-    httpd.set('oracles', os)
+    httpd.set('oracles', oracles)
     hnd.cgi_directories = ["/"]
     print("serving at port", args.port)
     try:
