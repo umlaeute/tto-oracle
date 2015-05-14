@@ -23,8 +23,17 @@ import socketserver
 import json
 from urllib.parse import parse_qs
 
+import textwrap
+from unidecode import unidecode
+import time
+
 PORT = 8000
 
+
+import os
+import os.path
+PRINTSCRIPT=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'print.sh')
+print("PRINTSCRIPT = %s" % (PRINTSCRIPT))
 
 def _dictget_typed(d, key, default):
     res=default
@@ -114,9 +123,41 @@ class Handler(http.server.BaseHTTPRequestHandler):
         o=self.getoracle(words)
 
         t=o.speak(inputtext=inputtext, truncate=True)
+        if self.printOut:
+            self.printOut(t)
         if t:
             if respondfun:
                 respondfun(t)
+    @staticmethod
+    def normalizetext(text, width=70):
+        ## remove non-ascii values
+        text=text.lower().replace('ä', 'ae').replace('ö', 'oe').replace('ü', 'ue')
+        text=unidecode(text)
+        ## format the text, so it doesn't exceed 80 characters per line
+        text='\n'.join(textwrap.wrap(text, width))
+        return text
+
+    def printOut(self, text, question='', width=70):
+        if not os.path.exists(PRINTSCRIPT):
+            self.printOut=None
+            print("no printscript found, disabling printout")
+            return
+
+        outputtext=""
+        if question:
+            outputtext+=self.normalizetext(question, width)+'\n\n'
+        outputtext+=self.normalizetext(text, width)
+
+        ## create a new filename
+        filename='prophecies/%s.txt' % (time.strftime('%Y%m%d-%H%M%S'))
+        ## and write the data
+        try:
+            with open(filename, 'w') as f:
+                f.write(outputtext)
+            os.system("%s %s" % (PRINTSCRIPT, filename))
+
+        except Exception as e:
+            print("couldn't write file '%s'" % (filename))
 
     @staticmethod
     def parseQuery(data):
